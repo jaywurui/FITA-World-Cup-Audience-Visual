@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="author" content="rui wu">
+    <meta name="description" content="infx 562 assignment 3">
+    <meta name="keywords" content="interactive, design, assignment, infx 562">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rui Wu - INFX 562 Assignment 3</title>
+	<script type="text/javascript" src="d3.min.js"></script>
+
+
+</head>
+
+<style>
+
+div,html{
+	margin: 0;
+	padding: 0;
+	font-family: "Arial", sans-serif;
+	font-size: 0.95em;
+	text-align: center;
+}
+#chart{
+	background-color: rgba(255,255,255,0.8);
+	
+}
+.axis path,
+.axis line{
+	fill: none;
+	stroke: #000;
+	shape-rendering: crispEdges;
+}
+.axis-label{
+	text-anchor: middle;
+	font-weight: bold;
+	font-size: 14px;
+}
+.gridline path,
+.gridline line{
+	fill: none;
+	stroke: #ccc;
+	shape-rendering: crispEdges;
+}
+.hovered{
+	opacity: 1!important
+}
+.concacafpoint{
+	opacity: 0.5
+}
+.afcpoint{
+	opacity: 0.5
+}
+.uefapoint{
+	opacity: 0.5
+}
+.conmebolpoint{
+	opacity: 0.5
+}
+.cafpoint{
+	opacity: 0.5
+}
+
+.tooltip{
+ position: absolute;
+ text-align: left;
+ width: 150px;
+ height: 100px;
+ padding: 10px;
+ margin-left: 22px;
+ margin-top: 20px;
+ font: 11px sans-serif;
+ pointer-events: none;
+ background-color: #fff;
+ box-shadow: 2px 2px 2px #828282;
+ border-radius: 10px;
+}
+
+#content {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+#header {
+	position: absolute;
+	top: 0px;
+	padding-top: 20px;
+	opacity: 1!important
+}
+
+#header h1 {
+	color: white;
+	font-weight: bold;
+	font-size: 35px;
+	text-shadow: 3px 3px 3px black;
+	z-index: -1
+}
+
+#pic {
+	position: absolute;
+	top: 0px;
+	opacity: 0.8;
+	z-index: -2;
+}
+#vis {
+	position: absolute;
+	top: 150px
+}
+
+.legendHead {
+	color: black;
+	font-size: 15px;
+	font-weight: bold;
+}
+
+#filter {
+	position: absolute;
+	top:100px;
+	left: 47%;
+}
+
+</style>
+<body>
+
+	<div id="background">
+		<div id="content">
+			<div id="header">
+				<h1>2014 FITA World Cup TV Audience and GDP by Country </h1>
+			</div>
+			<div id="pic">
+				<img src="background_fifa.jpg" alt="Backgroun Image">
+			</div>
+			
+			<div id="vis">
+			</div>
+		</div>
+		
+
+		<div id="filter">
+			<select id="confederationFilter" onchange="handleFilter()">
+				<option value="all">ALL</option>
+	 			<option value="concacaf">CONCACAF</option>
+				<option value="afc">AFC</option>
+				<option value="uefa">UEFA</option>
+				<option value="conmebol">CONMEBOL</option>
+				<option value="caf">CAF</option>
+			  
+			</select>
+
+		</div>
+		
+	</div>
+
+<script  type="text/javascript" src="fifa.js"></script>
+<script>
+
+//create tooltip
+var div = d3.select("body").append("div")
+	.attr("class", "tooltip")
+	.style("opacity", 0);
+
+//create plotting area
+var w = 1100;
+var h = 650;
+var margin = {
+	top: 55,
+	bottom: 85,
+	left: 115,
+	right: 200
+};
+var width = w - margin.left - margin.right;
+var height = h - margin.top - margin.bottom;
+
+var svg = d3.select("#vis").append("svg")
+			.attr("id", "chart")
+			.attr("width", w)
+			.attr("height", h);
+var chart = svg.append("g")
+			.classed("display", true)
+			.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+//create axes & gridlines
+var xMin = d3.min(data, function(d) {return d.audience;})
+var x = d3.scale.log()
+		.domain([xMin, 500])
+		.range([0, width]);
+
+var y = d3.scale.log()
+		.domain([0.5, 10000])
+		.range ([height, 0]);
+
+var xTickValues = [1, 2, 5, 10, 20, 50, 100, 200, 500]
+var yTickValues = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
+
+var xAxis = d3.svg.axis()
+			.scale(x)
+			.tickValues(xTickValues)
+			.tickFormat(function(d){
+				return d.toFixed(0);
+			})
+			.orient("bottom");
+	chart.append("g")
+		.classed("axis x", true)
+		.attr("transform", "translate(0," + height + ")")
+		.call(xAxis)
+	chart.select(".x.axis")
+		.append("text")
+		.classed("x axis-label", true)
+		.attr("transform", "translate(" + width/2 + "," + 48 + ")")
+		.text("The Number of Audience (million)");
+
+var xGridlines = d3.svg.axis()
+			.scale(x)
+			.tickValues(xTickValues)
+			.tickSize(-height,-height)
+			.tickFormat("")
+			.orient("bottom");
+	chart.append("g")
+		.classed("gridline x", true)
+		.attr("transform", "translate(0," + height + ")")
+		.call(xGridlines)
+
+var yAxis = d3.svg.axis()
+			.scale(y)
+			.tickValues(yTickValues)
+			.tickFormat(function(d){
+				return d.toFixed(0);
+			})
+			.orient("left");
+	chart.append("g")
+		.classed("axis y", true)
+		.attr("transform", "translate(0,0)")
+		.call(yAxis)
+	chart.select(".y.axis")
+		.append("text")
+		.classed("y axis-label", true)
+		.attr("transform", "translate(" + -56 + "," + height/2 + ") rotate(-90)")
+		.text("The GDP of Audience ($)")
+
+var yGridlines = d3.svg.axis()
+				.scale(y)
+				.tickValues(yTickValues)
+				.tickSize(-width,0,0)
+				.tickFormat("")
+				.orient("left");
+	chart.append("g")
+		.classed("gridline y", true)
+		.attr("transform", "translate(0,0)")
+		.call(yGridlines)
+
+//create scale for circles' r regarding to population
+var sizeMap = d3.scale.linear()
+				.domain(d3.extent(data, function(d){
+					return d.population*0.5;
+				}))
+				.range([4, 15])
+
+var colorScale = d3.scale.category10();
+
+//create separate arrays regarding to different confederation
+var nest = d3.nest()
+			.key(function(d){
+				return d.confederation;
+				});
+var nestedData = nest.entries(data);
+console.log(nestedData)
+
+let concacaf = []
+let afc = []
+let uefa = []
+let conmebol = []
+let caf = []
+
+for(let x of nestedData) {
+   if(x.key == "CONCACAF") {
+    concacaf = x.values;
+    }
+   if (x.key == "AFC") {
+   	afc = x.values;
+   } 
+   if (x.key == "UEFA") {
+   	uefa = x.values;
+   }
+   if (x.key == "CONMEBOL") {
+   	conmebol = x.values;
+   }
+   if (x.key == "CAF") {
+   	caf = x.values;
+   }
+}
+
+var groups = [concacaf, afc, uefa, conmebol, caf]
+
+var chartGroup = chart.append("g").classed("chartGroup",true)
+var currGroup = "all"
+
+
+//append Legend Header
+chart.append("text")
+	.classed("legendHead", true)
+	.attr("x",width+60)
+	.attr("y",10)
+	.text("Confederation")
+
+
+
+// sizeLegendData = ["10","100","150","300","700","1400"]
+
+// svg.append("g")
+// 	.attr("class", "sizeMap")
+// 	.attr("transform", "translate(20, 40)");
+
+// var legendSize = d3.legendSize()
+// 	.scale(linearSize)
+// 	.shape("circle")
+// 	.shapePadding(15)
+// 	.labelOffset(20)
+// 	.orient("horizontal");
+
+// svg.select(".legendSize")
+// 	.call(legendSize);
+
+
+//for(let i=0; i<sizeLegendData.length; i++) {
+	//if (i==0) {
+
+	/*/} else {
+		chart.append("circle")
+		.attr("cx", width+68)
+		.attr("cy", i*40 + 200 + sizeMap(+sizeLegendData[i-1]) )
+		.attr("r", function(d){
+			return sizeMap(+sizeLegendData[i]);
+		})
+		.attr("fill", "green");
+		.shapepadding(15);
+	*/
+
+
+
+
+function drawColorLegend(className, index) {
+	chart.append("rect")
+		.attr("x", width+60)
+		.attr("y", index*25 + 25)
+		.attr("width", 15)
+		.attr("height", 15)
+		.attr("fill", function() {
+			return colorScale(className)
+		})
+
+	chart.append("text")
+		.attr("x", width+85)
+		.attr("y", index*25 + 37.5)
+		.text(className.toUpperCase())
+}
+
+
+
+function drawByConfederation(data, className, index, currGroup) {
+	//transform className
+	className = className.toLowerCase();
+
+	//enter()
+	chartGroup.selectAll("." + className)
+			.data(data)
+			.enter()
+				.append("circle")
+				.classed(className + "point", true);
+	//update
+	chartGroup.selectAll("." + className + "point")
+			.attr("r", function(d){
+				return sizeMap(d.population);
+				console.log(d.population)
+			})
+			.attr("cx", function(d){
+				return x(d.audience);
+			})
+			.attr("cy", function(d){
+				return y(d.gdp);
+			})
+			.attr("fill", function(d) {
+				return colorScale(className)
+			})
+			.on("mouseover", function(d){
+				if (currGroup == "all") {
+					d3.selectAll("." + className + "point")
+					.classed("hovered",true)
+				} else {
+					d3.select(this)
+					.classed("hovered",true)
+				}
+				
+				div.transition()
+					.duration(200)
+					.style("opacity", .9);
+				div.html("<b>Country:</b> " + d.country + "<p><b>Audience(million):</b> " + d.audience + "<p><b>GDP($):</b> " + d.gdp + "<p><b>Population(million):</b> " + d.population)
+					.style("left", (d3.event.pageX ) + "px")
+					.style("top", (d3.event.pageY - 28) + "px");
+				})
+			.on("mouseout", function(d) {
+				d3.selectAll("." + className + "point")
+					.classed("hovered",false)
+				div.transition()
+					.duration(500)
+					.style("opacity", 0);
+				});
+	//exit()
+	chartGroup.selectAll("className + .point")
+			.data(data)
+			.exit()
+			.remove();
+
+
+	drawColorLegend(className, index);
+}
+
+// iterate through the array
+// for(let i=0; i<nestedData.length; i++) {
+// 	drawByConfederation(nestedData[i].values, nestedData[i].key, i);
+// }
+
+console.log(d3.select(".chartGroup"))
+
+function handleFilter() {
+	var currGroup = d3.select("#confederationFilter").property('value');
+	draw(currGroup);
+}
+
+function draw(currGroup) {
+	d3.select(".chartGroup").html("");
+	if (currGroup == "all") {
+		//iterate through the array
+		for(let i=0; i<nestedData.length; i++) {
+			drawByConfederation(nestedData[i].values, nestedData[i].key, i, currGroup);
+		}
+	} else {
+		for(let i=0; i<nestedData.length; i++) {
+			console.log(nestedData[i].key.toLowerCase())
+			if (nestedData[i].key.toLowerCase() == currGroup) {
+				drawByConfederation(nestedData[i].values, nestedData[i].key, i, currGroup);
+			}
+		}
+	}
+}
+
+draw("all");
+
+
+
+
+
+</script>
+
+</body>
+
+</html>
